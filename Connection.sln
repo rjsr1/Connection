@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26730.16
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClassLibrary1", "ClassLibrary1\ClassLibrary1.csproj", "{4664A373-E7FD-4B85-B307-F5C42D793839}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Connection", "ClassLibrary1\Connection.csproj", "{4664A373-E7FD-4B85-B307-F5C42D793839}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
