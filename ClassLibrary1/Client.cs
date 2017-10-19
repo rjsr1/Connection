@@ -23,8 +23,10 @@ public class StateObject
 public class Client
 {
     // The port number for the remote device.
-    private const int port = 3555;
+    //private const int port = 3555;
     private Socket clientSocket;
+    private string ip;
+    private int port;
 
     // ManualResetEvent instances signal completion.
     private static ManualResetEvent connectDone =
@@ -37,6 +39,11 @@ public class Client
     // The response from the remote device.
     private String response = String.Empty;
 
+    public Client(int port,string ip)
+    {
+        this.ip = ip;
+        this.port = port;
+    }
     public void StartClient()
     {
         // Connect to a remote device.
@@ -45,8 +52,8 @@ public class Client
             // Establish the remote endpoint for the socket.
             // The name of the             
 
-            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");//será parametro na DLL
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);//será parametro na DLL
+            IPAddress ipAddress = IPAddress.Parse(this.ip);
+            IPEndPoint remoteEP = new IPEndPoint(ipAddress, this.port);
 
             // Create a TCP/IP socket.
             this.clientSocket = new Socket(AddressFamily.InterNetwork,
@@ -84,8 +91,8 @@ public class Client
     }
     public void ReleaseSocket()
     {
-        clientSocket.Shutdown(SocketShutdown.Both);
-        clientSocket.Close();
+        this.clientSocket.Shutdown(SocketShutdown.Both);
+        this.clientSocket.Close();
     }
 
     private void ConnectCallback(IAsyncResult ar)
@@ -121,6 +128,7 @@ public class Client
             // Begin receiving the data from the remote device.
             client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReceiveCallback), state);
+            
         }
         catch (Exception e)
         {
@@ -166,8 +174,9 @@ public class Client
         }
     }
 
-    public void Send(Socket client, String data)
+    public void Send( String data)
     {
+        Socket client = this.clientSocket;
         // Convert the string data to byte data using ASCII encoding.
         byte[] byteData = Encoding.ASCII.GetBytes(data);
 
@@ -195,7 +204,10 @@ public class Client
             Console.WriteLine(e.ToString());
         }
     }
-
+    public string GetSocketReceiveResponse()
+    {
+        return this.response;
+    }
     /*public static void Main(String[] args)
     {
         Client cl1 = new Client();
