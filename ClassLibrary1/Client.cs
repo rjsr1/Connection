@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Text;
 
-
+/*
 public class StateObject
 {
     // Client socket.
@@ -16,13 +16,14 @@ public class StateObject
     // Received data string.
     public StringBuilder sb = new StringBuilder();
 }
+*/
 
 
 
-public class Cliente
+public class Client
 {
     // The port number for the remote device.
-    private const int port = 2000;
+    private const int port = 3555;
     private Socket clientSocket;
 
     // ManualResetEvent instances signal completion.
@@ -36,17 +37,16 @@ public class Cliente
     // The response from the remote device.
     private String response = String.Empty;
 
-    private void StartClient(string message)
+    public void StartClient()
     {
         // Connect to a remote device.
         try
         {
             // Establish the remote endpoint for the socket.
-            // The name of the 
-            // remote device is "host.contoso.com".
+            // The name of the             
 
-            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");
-            IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);
+            IPAddress ipAddress = IPAddress.Parse("127.0.0.1");//será parametro na DLL
+            IPEndPoint remoteEP = new IPEndPoint(ipAddress, port);//será parametro na DLL
 
             // Create a TCP/IP socket.
             this.clientSocket = new Socket(AddressFamily.InterNetwork,
@@ -58,15 +58,15 @@ public class Cliente
             connectDone.WaitOne();
 
             // Send test data to the remote device.
-            Send(clientSocket, message);
-            sendDone.WaitOne();
+            // Send(clientSocket, message);
+            //sendDone.WaitOne();
 
             // Receive the response from the remote device.
-            Receive(clientSocket);
-            receiveDone.WaitOne();
+            // Receive(clientSocket);
+            //receiveDone.WaitOne();
 
             // Write the response to the console.
-            Console.WriteLine("Response received : {0}", response);
+            //Console.WriteLine("Response received : {0}", response);
 
             // Release the socket.
 
@@ -82,7 +82,7 @@ public class Cliente
     {
         return this.clientSocket;
     }
-    public void releaseSocket()
+    public void ReleaseSocket()
     {
         clientSocket.Shutdown(SocketShutdown.Both);
         clientSocket.Close();
@@ -98,8 +98,8 @@ public class Cliente
             // Complete the connection.
             client.EndConnect(ar);
 
-            Console.WriteLine("Socket connected to {0}",
-                client.RemoteEndPoint.ToString());
+           // Console.WriteLine("Socket connected to {0}",
+           //     client.RemoteEndPoint.ToString());
 
             // Signal that the connection has been made.
             connectDone.Set();
@@ -110,7 +110,7 @@ public class Cliente
         }
     }
 
-    private void Receive(Socket client)
+    public void Receive(Socket client)
     {
         try
         {
@@ -166,7 +166,7 @@ public class Cliente
         }
     }
 
-    private void Send(Socket client, String data)
+    public void Send(Socket client, String data)
     {
         // Convert the string data to byte data using ASCII encoding.
         byte[] byteData = Encoding.ASCII.GetBytes(data);
@@ -185,7 +185,7 @@ public class Cliente
 
             // Complete sending the data to the remote device.
             int bytesSent = client.EndSend(ar);
-            Console.WriteLine("Sent {0} bytes to server.", bytesSent);
+            //Console.WriteLine("Sent {0} bytes to server.", bytesSent);
 
             // Signal that all bytes have been sent.
             sendDone.Set();
@@ -196,16 +196,30 @@ public class Cliente
         }
     }
 
-    public static int Main(String[] args)
+    /*public static void Main(String[] args)
     {
-        Cliente cl1 = new Cliente();
-        cl1.StartClient("");
-        string msg = Console.ReadLine();
-        if (msg == "sair")
+        Client cl1 = new Client();
+        Client cl2 = new Client();
+        cl1.StartClient();
+        cl2.StartClient();
+        bool exit = false;
+        while (exit == false)
         {
-            cl1.releaseSocket();
+
+            string msg = Console.ReadLine();
+            if (msg == "sair")
+            {
+                cl1.ReleaseSocket();
+                cl2.ReleaseSocket();
+                exit = true;
+            }
+            else
+            {
+                cl1.Send(cl1.GetSocket(), msg);
+                cl2.Send(cl1.GetSocket(), msg + "socket dois");
+            }
         }
 
-        return 0;
-    }
+
+    }*/
 }
