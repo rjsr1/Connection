@@ -22,8 +22,7 @@ public class StateObject
 
 public class Client
 {
-    // The port number for the remote device.
-    //private const int port = 3555;
+    
     private Socket clientSocket;
     private string ip;
     private int port;
@@ -62,22 +61,8 @@ public class Client
             // Connect to the remote endpoint.
             clientSocket.BeginConnect(remoteEP,
                     new AsyncCallback(ConnectCallback), clientSocket);
-            connectDone.WaitOne();
-
-            // Send test data to the remote device.
-            // Send(clientSocket, message);
-            //sendDone.WaitOne();
-
-            // Receive the response from the remote device.
-            // Receive(clientSocket);
-            //receiveDone.WaitOne();
-
-            // Write the response to the console.
-            //Console.WriteLine("Response received : {0}", response);
-
-            // Release the socket.
-
-
+            connectDone.WaitOne();        
+                                  
         }
         catch (Exception e)
         {
@@ -105,8 +90,6 @@ public class Client
             // Complete the connection.
             client.EndConnect(ar);
 
-           // Console.WriteLine("Socket connected to {0}",
-           //     client.RemoteEndPoint.ToString());
 
             // Signal that the connection has been made.
             connectDone.Set();
@@ -208,30 +191,6 @@ public class Client
     {
         return this.response;
     }
-    /*public static void Main(String[] args)
-    {
-        Client cl1 = new Client();
-        Client cl2 = new Client();
-        cl1.StartClient();
-        cl2.StartClient();
-        bool exit = false;
-        while (exit == false)
-        {
-
-            string msg = Console.ReadLine();
-            if (msg == "sair")
-            {
-                cl1.ReleaseSocket();
-                cl2.ReleaseSocket();
-                exit = true;
-            }
-            else
-            {
-                cl1.Send(cl1.GetSocket(), msg);
-                cl2.Send(cl1.GetSocket(), msg + "socket dois");
-            }
-        }
-
-
-    }*/
+    
+    
 }

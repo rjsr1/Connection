@@ -60,8 +60,7 @@ public class Server
                 // Set the event to nonsignaled state.
                 allDone.Reset();
 
-                // Start an asynchronous socket to listen for connections.
-                //Console.WriteLine("Waiting for a connection...");
+                // Start an asynchronous socket to listen for connections.               
                 listener.BeginAccept(
                     new AsyncCallback(AcceptCallback),
                     listener);
@@ -75,9 +74,6 @@ public class Server
         {
             Console.WriteLine(e.ToString());
         }
-
-       // Console.WriteLine("\nPress ENTER to continue...");
-       // Console.Read();
 
     }
 
@@ -122,17 +118,7 @@ public class Server
             // Check for end-of-file tag. If it is not there, read 
             // more data.
             content = state.sb.ToString();
-            Send(handler, "Menssagem Recebida");
-
-            /* if (content.IndexOf("<EOF>") > -1)
-             {
-                 // All the data has been read from the 
-                 // client. Display it on the console.
-                 Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                     content.Length, content);
-                 // Echo the data back to the client.
-             }
-             */
+            Send(handler, "Message Received");           
             
         }
         else
@@ -164,9 +150,7 @@ public class Server
 
             // Complete sending the data to the remote device.
             int bytesSent = handler.EndSend(ar);
-            // Console.WriteLine("All data recived from client.");
-            //Disconnect(handler);
-
+            
 
 
 
