@@ -115,8 +115,8 @@ public class Server
         // Read data from the client socket. 
         
         int bytesRead = handler.EndReceive(ar);
-        
-        if (bytesRead > 0)
+
+        if (bytesRead > 0)//acho que ter bytes maior que zero não garante que menssagem foi vazia por conta de cabeçalho tcp/ip
         {
             // There  might be more data, so store the data received so far.
             state.sb.Append(Encoding.ASCII.GetString(
@@ -126,19 +126,21 @@ public class Server
             // more data.
             content = state.sb.ToString();
             //Send(handler, "Message Received");
-            
+
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                        new AsyncCallback(ReadCallback), state);
-            
+
 
         }
-        else
-        {
+        if (content.EndsWith("eom"))
+        {//isso pode ter que vir antes, como no exemplo
            
-            // Not all data received. Get more.
+            // all data received. Get more.
             Console.WriteLine("menssagem concluida");
-            HandleContentReceived(content,handler);           
+            HandleContentReceived(content,handler);
         }
+       
+        
 
     }
 
