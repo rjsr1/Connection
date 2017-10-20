@@ -26,7 +26,7 @@ public class Server
     private int port;
     private string ip;
 
-    public Server(int port,string ip)
+    public Server(int port, string ip)
     {
         this.port = port;
         this.ip = ip;
@@ -91,8 +91,13 @@ public class Server
         // Create the state object.
         StateObject state = new StateObject();
         state.workSocket = handler;
+        try { 
         handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
             new AsyncCallback(ReadCallback), state);
+        }catch(Exception e)
+        {
+            Console.WriteLine(e.StackTrace);
+        }
     }
 
 
@@ -105,10 +110,12 @@ public class Server
         // from the asynchronous state object.
         StateObject state = (StateObject)ar.AsyncState;
         Socket handler = state.workSocket;
+        
 
         // Read data from the client socket. 
+        
         int bytesRead = handler.EndReceive(ar);
-
+        
         if (bytesRead > 0)
         {
             // There  might be more data, so store the data received so far.
@@ -118,17 +125,27 @@ public class Server
             // Check for end-of-file tag. If it is not there, read 
             // more data.
             content = state.sb.ToString();
-            Send(handler, "Message Received");           
+            //Send(handler, "Message Received");
             
+            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                       new AsyncCallback(ReadCallback), state);
+            
+
         }
         else
         {
+           
             // Not all data received. Get more.
-            // Console.WriteLine("lendo mais...");
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-            new AsyncCallback(ReadCallback), state);
+            Console.WriteLine("menssagem concluida");
+            HandleContentReceived(content,handler);           
         }
-        
+
+    }
+
+    private void HandleContentReceived(string content,Socket handler)
+    {
+        //put here the code to handle content received from client
+        Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}",content,handler.AddressFamily.ToString());
     }
 
     public void Send(Socket handler, String data)
@@ -150,7 +167,7 @@ public class Server
 
             // Complete sending the data to the remote device.
             int bytesSent = handler.EndSend(ar);
-            
+
 
 
 
@@ -172,5 +189,5 @@ public class Server
         Socket handler = (Socket)ar.AsyncState;
         handler.EndConnect(ar);
     }
-    
+
 }
