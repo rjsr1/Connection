@@ -22,7 +22,7 @@ public class StateObject
 
 public class Client
 {
-    
+
     private Socket clientSocket;
     private string ip;
     private int port;
@@ -38,7 +38,7 @@ public class Client
     // The response from the remote device.
     private String response = String.Empty;
 
-    public Client(int port,string ip)
+    public Client(int port, string ip)
     {
         this.ip = ip;
         this.port = port;
@@ -61,8 +61,8 @@ public class Client
             // Connect to the remote endpoint.
             clientSocket.BeginConnect(remoteEP,
                     new AsyncCallback(ConnectCallback), clientSocket);
-            connectDone.WaitOne();        
-                                  
+            connectDone.WaitOne();
+
         }
         catch (Exception e)
         {
@@ -78,6 +78,12 @@ public class Client
     {
         this.clientSocket.Shutdown(SocketShutdown.Both);
         this.clientSocket.Close();
+    }
+
+    private void DisconnectCallBack(IAsyncResult ar)
+    {
+        Socket handler = (Socket)ar.AsyncState;
+        handler.EndConnect(ar);
     }
 
     private void ConnectCallback(IAsyncResult ar)
@@ -111,7 +117,7 @@ public class Client
             // Begin receiving the data from the remote device.
             client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReceiveCallback), state);
-            
+
         }
         catch (Exception e)
         {
@@ -134,22 +140,35 @@ public class Client
             if (bytesRead > 0)
             {
                 // There might be more data, so store the data received so far.
-                state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
+                string content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
+                state.sb.Append(content);
 
-                // Get the rest of the data.
-                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReceiveCallback), state);
-            }
-            else
-            {
-                // All the data has arrived; put it in response.
-                if (state.sb.Length > 1)
+
+                int unicode = 4;
+                char character = (char)unicode;
+                string endOfMessage = character.ToString();
+
+
+                if (content.EndsWith(endOfMessage))
                 {
-                    response = state.sb.ToString();
+                    // All the data has arrived; put it in response.
+                    if (state.sb.Length > 1)
+                    {
+                        response = state.sb.ToString();
+                    }
+                    // Signal that all bytes have been received.
+                    receiveDone.Set();
+
                 }
-                // Signal that all bytes have been received.
-                receiveDone.Set();
+                else
+                {
+                    // Get the rest of the data.
+                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReceiveCallback), state);
+                }
+
             }
+
         }
         catch (Exception e)
         {
@@ -157,7 +176,22 @@ public class Client
         }
     }
 
-    public void Send( String data)
+
+    public void EndMessage(Socket handler)
+    {
+        int unicode = 4;
+        char character = (char)unicode;
+        string endOfMessage = character.ToString();
+
+        //get bytes for endMassage code ASCII
+        byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
+
+        //send endOfMessage code to server
+        handler.BeginSend(byteData, 0, byteData.Length, 0,
+            new AsyncCallback(SendCallback), handler);
+    }
+
+    public void Send(String data)
     {
         Socket client = this.clientSocket;
         // Convert the string data to byte data using ASCII encoding.
@@ -191,6 +225,6 @@ public class Client
     {
         return this.response;
     }
-    
-    
+
+
 }

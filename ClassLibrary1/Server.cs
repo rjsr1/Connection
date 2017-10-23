@@ -86,15 +86,15 @@ public class Server
         Socket listener = (Socket)ar.AsyncState;
         Socket handler = listener.EndAccept(ar);
 
-
-
         // Create the state object.
         StateObject state = new StateObject();
         state.workSocket = handler;
-        try { 
-        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-            new AsyncCallback(ReadCallback), state);
-        }catch(Exception e)
+        try
+        {
+            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                new AsyncCallback(ReadCallback), state);
+        }
+        catch (Exception e)
         {
             Console.WriteLine(e.StackTrace);
         }
@@ -110,44 +110,55 @@ public class Server
         // from the asynchronous state object.
         StateObject state = (StateObject)ar.AsyncState;
         Socket handler = state.workSocket;
-        
+
 
         // Read data from the client socket. 
-        
         int bytesRead = handler.EndReceive(ar);
 
         if (bytesRead > 0)//acho que ter bytes maior que zero não garante que menssagem foi vazia por conta de cabeçalho tcp/ip
         {
             // There  might be more data, so store the data received so far.
-            state.sb.Append(Encoding.ASCII.GetString(
-                state.buffer, 0, bytesRead));
+            content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
+            state.sb.Append(content);
+
+
+            int unicode = 4;
+            char character = (char)unicode;
+            string endOfMessage = character.ToString();
 
             // Check for end-of-file tag. If it is not there, read 
             // more data.
             content = state.sb.ToString();
             //Send(handler, "Message Received");
 
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                       new AsyncCallback(ReadCallback), state);
-
-
-        }
-        if (content.EndsWith("eom"))
-        {//isso pode ter que vir antes, como no exemplo
-           
-            // all data received. Get more.
-            Console.WriteLine("menssagem concluida");
-            HandleContentReceived(content,handler);
-        }
-       
-        
+            if (content.EndsWith(endOfMessage))
+            {
+                //call method 
+                string result = state.sb.ToString();
+                HandleContentReceived(result, handler);
+            }
+            else
+            {
+                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                                       new AsyncCallback(ReadCallback), state);
+            }
+            
+        }        
 
     }
 
-    private void HandleContentReceived(string content,Socket handler)
+    private void HandleContentReceived(string content, Socket handler)
     {
         //put here the code to handle content received from client
-        Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}",content,handler.AddressFamily.ToString());
+        Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}", content, handler.LocalEndPoint.ToString());
+
+        //create new state from new messages
+        StateObject state = new StateObject();
+        state.workSocket = handler;
+
+        //get more data from client       
+        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                                      new AsyncCallback(ReadCallback), state);
     }
 
     public void Send(Socket handler, String data)
@@ -160,6 +171,7 @@ public class Server
             new AsyncCallback(SendCallback), handler);
     }
 
+
     private void SendCallback(IAsyncResult ar)
     {
         try
@@ -169,10 +181,6 @@ public class Server
 
             // Complete sending the data to the remote device.
             int bytesSent = handler.EndSend(ar);
-
-
-
-
         }
         catch (Exception e)
         {
