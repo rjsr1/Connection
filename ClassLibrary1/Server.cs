@@ -37,10 +37,7 @@ public class Server
         // Data buffer for incoming data.
         byte[] bytes = new Byte[1024];
 
-        // Establish the local endpoint for the socket.
-        // The DNS name of the computer
-        // running the listener is "host.contoso.com".
-
+        // Establish the local endpoint for the socket.        
         //faz parse com string ip
         IPAddress ipAddress = IPAddress.Parse(this.ip);
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, this.port);
@@ -111,34 +108,32 @@ public class Server
         StateObject state = (StateObject)ar.AsyncState;
         Socket handler = state.workSocket;
 
-
         // Read data from the client socket. 
         int bytesRead = handler.EndReceive(ar);
 
-        if (bytesRead > 0)//acho que ter bytes maior que zero não garante que menssagem foi vazia por conta de cabeçalho tcp/ip
+        if (bytesRead > 0)
         {
             // There  might be more data, so store the data received so far.
             content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
             state.sb.Append(content);
 
-
             int unicode = 4;
             char character = (char)unicode;
             string endOfMessage = character.ToString();
-
-            // Check for end-of-file tag. If it is not there, read 
-            // more data.
+            
             content = state.sb.ToString();
+            
             //Send(handler, "Message Received");
-
+            //check if message ends with endOfMessage. 
             if (content.EndsWith(endOfMessage))
             {
-                //call method 
+                //call method that handler content received                
                 string result = state.sb.ToString();
                 HandleContentReceived(result, handler);
             }
             else
-            {
+            {   
+                //read more data from client
                 handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                                        new AsyncCallback(ReadCallback), state);
             }
@@ -151,12 +146,17 @@ public class Server
     {
         //put here the code to handle content received from client
         Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}", content, handler.LocalEndPoint.ToString());
+        //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
+        int unicode = 4;
+        char character = (char)unicode;
+        string endOfMessage = character.ToString();
 
+        Send(handler, "foi recebido este conteudo : " + content+endOfMessage);
         //create new state from new messages
         StateObject state = new StateObject();
         state.workSocket = handler;
 
-        //get more data from client       
+        //continue to receive data from client       
         handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                                       new AsyncCallback(ReadCallback), state);
     }
@@ -191,7 +191,6 @@ public class Server
     public void Disconnect(Socket handler)
     {
         handler.BeginDisconnect(false, new AsyncCallback(DisconnectCallback), handler);
-
     }
 
     private void DisconnectCallback(IAsyncResult ar)

@@ -78,6 +78,7 @@ public class Client
     {
         this.clientSocket.Shutdown(SocketShutdown.Both);
         this.clientSocket.Close();
+        
     }
 
     private void DisconnectCallBack(IAsyncResult ar)
@@ -177,8 +178,11 @@ public class Client
     }
 
 
-    public void EndMessage(Socket handler)
+    public void EndMessage( )
     {
+
+        Socket handler = this.clientSocket;
+
         int unicode = 4;
         char character = (char)unicode;
         string endOfMessage = character.ToString();
