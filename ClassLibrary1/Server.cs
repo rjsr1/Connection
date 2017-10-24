@@ -152,6 +152,7 @@ public class Server
         string endOfMessage = character.ToString();
 
         Send(handler, "foi recebido este conteudo : " + content+endOfMessage);
+
         //create new state from new messages
         StateObject state = new StateObject();
         state.workSocket = handler;
