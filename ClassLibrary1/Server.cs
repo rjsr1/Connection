@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
+using Connection;
 
 public class StateObject
 {
@@ -31,6 +32,7 @@ public class Server
         this.port = port;
         this.ip = ip;
     }
+    
 
     public void StartListening()
     {
@@ -116,11 +118,14 @@ public class Server
             // There  might be more data, so store the data received so far.
             content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
             state.sb.Append(content);
+            /*   
+            *   int unicode = 4;
+            *    char character = (char)unicode;
+            *   string endOfMessage = character.ToString();
+            */
+            //add endof message tag to content
+            String endOfMessage = Connection_Util.ASCIITag(4);
 
-            int unicode = 4;
-            char character = (char)unicode;
-            string endOfMessage = character.ToString();
-            
             content = state.sb.ToString();
             
             //Send(handler, "Message Received");
@@ -135,7 +140,7 @@ public class Server
             {   
                 //read more data from client
                 handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                                       new AsyncCallback(ReadCallback), state);
+                    new AsyncCallback(ReadCallback), state);
             }
             
         }        
@@ -143,23 +148,41 @@ public class Server
     }
 
     private void HandleContentReceived(string content, Socket handler)
-    {
-        //put here the code to handle content received from client
+    {       
+       
         Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}", content, handler.LocalEndPoint.ToString());
         //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
-        int unicode = 4;
-        char character = (char)unicode;
-        string endOfMessage = character.ToString();
+        
+        String endOfMessage = Connection_Util.ASCIITag(4);
+        String messageToClient = "foi recebido este conteudo : " + content;
+        EndMessage(handler);        
 
-        Send(handler, "foi recebido este conteudo : " + content+endOfMessage);
-
+       
+        //Send response to client
+        Send(handler, messageToClient);
+        
         //create new state from new messages
         StateObject state = new StateObject();
         state.workSocket = handler;
-
+       
+        
         //continue to receive data from client       
         handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                                       new AsyncCallback(ReadCallback), state);
+        
+       
+    }
+    public void EndMessage(Socket handler)
+    {
+
+        String endOfMessage = Connection_Util.ASCIITag(4);
+
+        //get bytes for endMassage code ASCII
+        byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
+
+        //send endOfMessage code to server
+        handler.BeginSend(byteData, 0, byteData.Length, 0,
+            new AsyncCallback(SendCallback), handler);
     }
 
     public void Send(Socket handler, String data)
@@ -182,6 +205,8 @@ public class Server
 
             // Complete sending the data to the remote device.
             int bytesSent = handler.EndSend(ar);
+
+            Console.WriteLine("Sent {0} bytes to client.", bytesSent);
         }
         catch (Exception e)
         {

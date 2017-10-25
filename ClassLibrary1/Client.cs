@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Text;
+using Connection;
 
 /*
 public class StateObject
@@ -118,7 +119,6 @@ public class Client
             // Begin receiving the data from the remote device.
             client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReceiveCallback), state);
-
         }
         catch (Exception e)
         {
@@ -130,6 +130,7 @@ public class Client
     {
         try
         {
+            Console.WriteLine("começando a receber...");
             // Retrieve the state object and the client socket 
             // from the asynchronous state object.
             StateObject state = (StateObject)ar.AsyncState;
@@ -143,19 +144,21 @@ public class Client
                 // There might be more data, so store the data received so far.
                 string content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
                 state.sb.Append(content);
+                Console.WriteLine("dentro do if");
 
-
-                int unicode = 4;
-                char character = (char)unicode;
-                string endOfMessage = character.ToString();
-
+                /* int unicode = 4;
+                 char character = (char)unicode;
+                 string endOfMessage = character.ToString();
+                 */
+                String endOfMessage = Connection_Util.ASCIITag(4);
 
                 if (content.EndsWith(endOfMessage))
                 {
                     // All the data has arrived; put it in response.
                     if (state.sb.Length > 1)
                     {
-                        response = state.sb.ToString();
+                        Console.WriteLine("antes de usar string buildier"+content);//para debug
+                        this.response = state.sb.ToString();
                     }
                     // Signal that all bytes have been received.
                     receiveDone.Set();
@@ -182,10 +185,8 @@ public class Client
     {
 
         Socket handler = this.clientSocket;
-
-        int unicode = 4;
-        char character = (char)unicode;
-        string endOfMessage = character.ToString();
+       
+        String endOfMessage = Connection_Util.ASCIITag(4);
 
         //get bytes for endMassage code ASCII
         byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
@@ -216,7 +217,7 @@ public class Client
             // Complete sending the data to the remote device.
             int bytesSent = client.EndSend(ar);
             Console.WriteLine("Sent {0} bytes to server.", bytesSent);
-
+            
             // Signal that all bytes have been sent.
             sendDone.Set();
         }
@@ -227,6 +228,7 @@ public class Client
     }
     public string GetSocketReceiveResponse()
     {
+        Console.WriteLine(this.response+"essa eh a resposta");
         return this.response;
     }
 
