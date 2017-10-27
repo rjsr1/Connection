@@ -37,7 +37,7 @@ public class Client
         new ManualResetEvent(false);
 
     // The response from the remote device.
-    private String response = String.Empty;
+    private string response = string.Empty;
 
     public Client(int port, string ip)
     {
@@ -90,13 +90,15 @@ public class Client
 
     private void ConnectCallback(IAsyncResult ar)
     {
-        try
+        try   //************Acho que aqui ja pode comerçar o metodo receive, que bloqueia a thread 
+              //************mas como são canais diferentes para enviar e receber~, não dará problema...
         {
             // Retrieve the socket from the state object.
             Socket client = (Socket)ar.AsyncState;
 
             // Complete the connection.
             client.EndConnect(ar);
+            Receive(GetSocket());
 
 
             // Signal that the connection has been made.
@@ -143,8 +145,7 @@ public class Client
             {
                 // There might be more data, so store the data received so far.
                 string content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
-                state.sb.Append(content);
-                Console.WriteLine("dentro do if");
+                state.sb.Append(content);                
 
                 /* int unicode = 4;
                  char character = (char)unicode;
@@ -157,8 +158,10 @@ public class Client
                     // All the data has arrived; put it in response.
                     if (state.sb.Length > 1)
                     {
-                        Console.WriteLine("antes de usar string buildier"+content);//para debug
+                       
                         this.response = state.sb.ToString();
+                        Console.WriteLine("dentro do metodo"+content);//para debug
+                        GetSocketReceiveResponse();
                     }
                     // Signal that all bytes have been received.
                     receiveDone.Set();
@@ -228,7 +231,7 @@ public class Client
     }
     public string GetSocketReceiveResponse()
     {
-        Console.WriteLine(this.response+"essa eh a resposta");
+       // Console.WriteLine(this.response+"essa eh a resposta");
         return this.response;
     }
 

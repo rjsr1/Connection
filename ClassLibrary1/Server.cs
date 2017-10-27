@@ -154,8 +154,8 @@ public class Server
         //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
         
         String endOfMessage = Connection_Util.ASCIITag(4);
-        String messageToClient = "foi recebido este conteudo : " + content;
-        EndMessage(handler);        
+        String messageToClient = "foi recebido este conteudo : " + content+endOfMessage;
+        //EndMessage(handler);        
 
        
         //Send response to client
