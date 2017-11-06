@@ -3,8 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Collections;
-using System.Collections.Generic;
 using Connection;
 
 public class StateObject
@@ -26,13 +24,15 @@ public class Server
     //permite dizer qual porta e ip
     private int port;
     private string ip;
+    private int maxNumberOfClients;
 
-    public Server(int port, string ip)
+    public Server(int port, string ip, int maxNumberOfClients)
     {
         this.port = port;
         this.ip = ip;
+        this.maxNumberOfClients = maxNumberOfClients;
     }
-    
+
 
     public void StartListening()
     {
@@ -52,7 +52,7 @@ public class Server
         try
         {
             listener.Bind(localEndPoint);
-            listener.Listen(100);
+            listener.Listen(this.maxNumberOfClients);
 
             while (true)
             {
@@ -103,74 +103,85 @@ public class Server
 
     private void ReadCallback(IAsyncResult ar)
     {
-        String content = String.Empty;
-
-        // Retrieve the state object and the handler socket
-        // from the asynchronous state object.
-        StateObject state = (StateObject)ar.AsyncState;
-        Socket handler = state.workSocket;
-
-        // Read data from the client socket. 
-        int bytesRead = handler.EndReceive(ar);
-
-        if (bytesRead > 0)
+        try
         {
-            // There  might be more data, so store the data received so far.
-            content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
-            state.sb.Append(content);
-            /*   
-            *   int unicode = 4;
-            *    char character = (char)unicode;
-            *   string endOfMessage = character.ToString();
-            */
-            //add endof message tag to content
-            String endOfMessage = Connection_Util.ASCIITag(4);
+            String content = String.Empty;
 
-            content = state.sb.ToString();
-            
-            //Send(handler, "Message Received");
-            //check if message ends with endOfMessage. 
-            if (content.EndsWith(endOfMessage))
+            // Retrieve the state object and the handler socket
+            // from the asynchronous state object.
+            StateObject state = (StateObject)ar.AsyncState;
+            Socket handler = state.workSocket;
+
+            // Read data from the client socket. 
+            int bytesRead = handler.EndReceive(ar);
+
+            if (bytesRead > 0)
             {
-                //call method that handler content received                
-                string result = state.sb.ToString();
-                HandleContentReceived(result, handler);
-            }
-            else
-            {   
-                //read more data from client
-                handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReadCallback), state);
-            }
-            
-        }        
+                // There  might be more data, so store the data received so far.
+                content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
+                state.sb.Append(content);
+                /*   
+                *   int unicode = 4;
+                *    char character = (char)unicode;
+                *   string endOfMessage = character.ToString();
+                */
+                //add endof message tag to content
+                String endOfMessage = Connection_Util.ASCIITag(4);
 
+                content = state.sb.ToString();
+
+                //Send(handler, "Message Received");
+                //check if message ends with endOfMessage. 
+                if (content.EndsWith(endOfMessage))
+                {
+                    //call method that handler content received                
+                    string result = state.sb.ToString();
+                    result = RemoveEndOfMessage(result);
+                    HandleContentReceived(result, handler);
+                }
+                else
+                {
+                    //read more data from client
+                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReadCallback), state);
+                }
+
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine("erro receive");
+        }
+    }
+    private string RemoveEndOfMessage(string s)
+    {
+        return s.Remove(s.Length-1);
     }
 
     private void HandleContentReceived(string content, Socket handler)
-    {       
-       
+    {
+
         Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}", content, handler.LocalEndPoint.ToString());
         //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
-        
+
         String endOfMessage = Connection_Util.ASCIITag(4);
-        String messageToClient = "foi recebido este conteudo : " + content+endOfMessage;
+        String messageToClient = "recebi : " + content + endOfMessage;
         //EndMessage(handler);        
 
-       
+
         //Send response to client
         Send(handler, messageToClient);
-        
+
         //create new state from new messages
         StateObject state = new StateObject();
         state.workSocket = handler;
-       
-        
+
+
         //continue to receive data from client       
         handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                                       new AsyncCallback(ReadCallback), state);
-        
-       
+
+
     }
     public void EndMessage(Socket handler)
     {

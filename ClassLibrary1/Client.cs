@@ -23,7 +23,6 @@ public class StateObject
 
 public class Client
 {
-
     private Socket clientSocket;
     private string ip;
     private int port;
@@ -75,8 +74,7 @@ public class Client
 
     private void ConnectCallback(IAsyncResult ar)
     {
-        try   //************Acho que aqui ja pode comerçar o metodo receive, que bloqueia a thread 
-              //************mas como são canais diferentes para enviar e receber, não dará problema...
+        try
         {
             // Retrieve the socket from the state object.
             Socket client = (Socket)ar.AsyncState;
@@ -92,7 +90,7 @@ public class Client
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.StackTrace);
+            throw;
         }
     }
 
@@ -103,88 +101,93 @@ public class Client
             // Create the state object.
             StateObject state = new StateObject();
             state.workSocket = client;
-
-            // Begin receiving the data from the remote device.
-            client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                new AsyncCallback(ReceiveCallback), state);
-        }
-        catch(ObjectDisposedException ode)
-        {
-            Console.WriteLine("Pressione Y para reconectar");
-            String response = Console.ReadLine();
-            if (response == "Y")
+            if (this.GetSocket().Connected)
             {
-                StartClient();
+                // Begin receiving the data from the remote device.
+                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                    new AsyncCallback(ReceiveCallback), state);
             }
+        }
+        catch (ObjectDisposedException ode)
+        {
+            HandleObjectDesposed(ode);
         }
         catch (SocketException e)
         {
-            Console.WriteLine("Excessão de socket ok.");
+            throw;
         }
         catch (Exception e)
         {
+            Console.WriteLine(e.Message);
             Console.WriteLine(e.StackTrace);
         }
     }
 
     private void ReceiveCallback(IAsyncResult ar)
     {
-        try
+        if (this.clientSocket.Connected)
         {
-            Console.WriteLine("começando a receber...");
-            // Retrieve the state object and the client socket 
-            // from the asynchronous state object.
-            StateObject state = (StateObject)ar.AsyncState;
-            Socket client = state.workSocket;
-
-            // Read data from the remote device.
-            int bytesRead = client.EndReceive(ar);
-
-            if (bytesRead > 0)
+            try
             {
-                // There might be more data, so store the data received so far.
-                string content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
-                state.sb.Append(content);
+                // Retrieve the state object and the client socket 
+                // from the asynchronous state object.
+                StateObject state = (StateObject)ar.AsyncState;
+                Socket client = state.workSocket;
 
-                /* int unicode = 4;
-                 char character = (char)unicode;
-                 string endOfMessage = character.ToString();
-                 */
-                String endOfMessage = Connection_Util.ASCIITag(4);
+                // Read data from the remote device.
+                int bytesRead = client.EndReceive(ar);
 
-                if (content.EndsWith(endOfMessage))
+                if (bytesRead > 0)
                 {
-                    // All the data has arrived; put it in response.
-                    if (state.sb.Length > 1)
+                    // There might be more data, so store the data received so far.
+                    string content = Encoding.ASCII.GetString(state.buffer, 0, bytesRead);
+                    state.sb.Append(content);
+
+
+                    String endOfMessage = Connection_Util.ASCIITag(4);
+
+                    if (content.EndsWith(endOfMessage))
                     {
-                        this.response = state.sb.ToString();
-                        //Console.WriteLine("dentro do metodo");//para debug
-                        GetSocketReceiveResponse();
-                    }
-                    // Signal that all bytes have been received.
-                    receiveDone.Set();
+                        // All the data has arrived; put it in response.
+                        if (state.sb.Length > 1)
+                        {
+                            this.response = state.sb.ToString();
+                            this.response = RemoveEndOfMessage(response);
+                            HandleReceivedData();
+                        }
+                        // Signal that all bytes have been received.
+                        receiveDone.Set();
 
-                }
-                else
-                {
-                    // Get the rest of the data.
-                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                        new AsyncCallback(ReceiveCallback), state);
+                    }
+                    else
+                    {
+                        // Get the rest of the data.
+                        client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                            new AsyncCallback(ReceiveCallback), state);
+
+                    }
+
                 }
 
             }
-
-        }
-        catch (SocketException e)
-        {
-            Console.WriteLine(e.ToString());
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e.StackTrace);
+            catch (ObjectDisposedException ode)
+            {
+                throw;
+            }
+            catch (SocketException e)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                throw;
+            }
         }
     }
-
+    private string RemoveEndOfMessage(string s)
+    {
+        return s.Remove(s.Length - 1);
+    }
 
     public void EndMessage()
     {
@@ -197,22 +200,28 @@ public class Client
         byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
         try
         {
-            //send endOfMessage code to server
-            handler.BeginSend(byteData, 0, byteData.Length, 0,
-                new AsyncCallback(SendCallback), handler);
+            if (this.clientSocket.Connected)
+            {
+                //send endOfMessage code to server
+                handler.BeginSend(byteData, 0, byteData.Length, 0,
+                    new AsyncCallback(SendCallback), handler);
+            }
+            else
+            {
+                HandleSocketDisconnected();
+            }
+        }
+        catch (ObjectDisposedException ode)
+        {
+            throw;
         }
         catch (SocketException e)
         {
-            Console.WriteLine("você foi desconectado do Servidor. Gostaria de se Reconectar? Y/N");
-            String response = Console.ReadLine();
-            if (response == "Y")
-            {
-                StartClient();
-            }
+            throw;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.ToString());
+            throw;
         }
     }
 
@@ -223,17 +232,25 @@ public class Client
         byte[] byteData = Encoding.ASCII.GetBytes(data);
         try
         {
-            // Begin sending the data to the remote device.
-            client.BeginSend(byteData, 0, byteData.Length, 0,
-                new AsyncCallback(SendCallback), client);
+            if (this.clientSocket.Connected)
+            {
+                // Begin sending the data to the remote device.
+                client.BeginSend(byteData, 0, byteData.Length, 0,
+                    new AsyncCallback(SendCallback), client);
+            }
+           
+        }
+        catch (ObjectDisposedException ode)
+        {
+            throw;
         }
         catch (SocketException e)
         {
-            Console.WriteLine("Erro de socket ok");
+            throw;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            throw;
         }
     }
 
@@ -253,17 +270,28 @@ public class Client
         }
         catch (SocketException e)
         {
-            Console.WriteLine("voc~e foi desconectado do SErvidor. Gostaria de se Reconectar? Y/N");
-            String response = Console.ReadLine();
-            if (response == "Y")
-            {
-                StartClient();
-            }
+            throw;
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
+            throw;
         }
+    }
+
+    private void HandleSocketDisconnected()
+    {
+        Console.WriteLine("Você está desconectado do Servidor.Deseja se reconectar? sim/nao");
+        String response = Console.ReadLine();
+        if (response == "sim")
+        {
+            StartClient();
+        }
+    }
+
+    public void HandleReceivedData()
+    {
+        Console.WriteLine(this.GetSocketReceiveResponse());
+        Receive(this.clientSocket);
     }
     public string GetSocketReceiveResponse()
     {
@@ -276,22 +304,45 @@ public class Client
         return this.clientSocket;
     }
     public void ReleaseSocket()
-    {
-        receiveDone.Close();
+    {        
         this.clientSocket.Shutdown(SocketShutdown.Both);
         this.clientSocket.Close();
-        
+
     }
     public void Disconnect()
     {
-        clientSocket.BeginDisconnect(true, new AsyncCallback(DisconnectCallBack), this.clientSocket);
+        try
+        {
+            clientSocket.BeginDisconnect(false, new AsyncCallback(DisconnectCallBack), this.clientSocket);
+        }
+        catch (ObjectDisposedException ode)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
-
     private void DisconnectCallBack(IAsyncResult ar)
     {
-        Socket handler = (Socket)ar.AsyncState;
-        handler.EndConnect(ar);
+        try
+        {
+            Socket handler = (Socket)ar.AsyncState;
+            handler.Shutdown(SocketShutdown.Both);
+            handler.Close();
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
 
+    public void HandleObjectDesposed(ObjectDisposedException ode)
+    {
+        Console.WriteLine(ode.Message);
+        Console.WriteLine(ode.StackTrace);
+
+    }
 
 }
