@@ -1,0 +1,14 @@
+Projeto de DLL com função de Cliente ou Servidor.
+
+Classe Client.cs:
+-Contrutor com porta e ip.
+-metodo StartClient que faz conexão síncrona com o Servidor.
+-métodos Receive e Send fazem trabalho assíncrono.
+-método HandleReceivedData trata o conteúdo recebido.
+-método HandleSocketException trata excessões de sockets fechando a conexão e tentando reconectar.
+
+Classe Server.cs:
+-StartListening espera conexão de clients.
+-métodos Send e Receive assíncronos.
+-método HandleContendReceived trata conteúdo recebido.
+-método HandleSocketException trata excessões de socket fechando conexão
