@@ -93,25 +93,39 @@ public class Server
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                 new AsyncCallback(ReadCallback), state);
         }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
         catch (Exception e)
         {
             Console.WriteLine(e.StackTrace);
         }
     }
 
-
-
-    private void ReadCallback(IAsyncResult ar)
+    private void HandleSocketException(SocketException se, Socket handler)
     {
         try
         {
-            String content = String.Empty;
+            handler.Close();
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
+    }
 
-            // Retrieve the state object and the handler socket
-            // from the asynchronous state object.
-            StateObject state = (StateObject)ar.AsyncState;
-            Socket handler = state.workSocket;
+    private void ReadCallback(IAsyncResult ar)
+    {
 
+        String content = String.Empty;
+
+        // Retrieve the state object and the handler socket
+        // from the asynchronous state object.
+        StateObject state = (StateObject)ar.AsyncState;
+        Socket handler = state.workSocket;
+        try
+        {
             // Read data from the client socket. 
             int bytesRead = handler.EndReceive(ar);
 
@@ -148,6 +162,10 @@ public class Server
 
             }
         }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
         catch (Exception e)
         {
             Console.WriteLine("erro receive");
@@ -155,7 +173,14 @@ public class Server
     }
     private string RemoveEndOfMessage(string s)
     {
-        return s.Remove(s.Length-1);
+        return s.Remove(s.Length - 1);
+    }
+
+    private string AppendEndofMessageTag(string data)
+    {
+        String endOfMessage = Connection_Util.ASCIITag(4);
+        data = data.Insert(data.Length, endOfMessage);
+        return data;
     }
 
     private void HandleContentReceived(string content, Socket handler)
@@ -164,23 +189,32 @@ public class Server
         Console.WriteLine("foi recebido esse conteudo: {0} deste socket {1}", content, handler.LocalEndPoint.ToString());
         //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
 
-        String endOfMessage = Connection_Util.ASCIITag(4);
-        String messageToClient = "recebi : " + content + endOfMessage;
+        string messageToClient = AppendEndofMessageTag(content);
         //EndMessage(handler);        
 
+        try
+        {
+            //Send response to client
+            Send(handler, messageToClient);
 
-        //Send response to client
-        Send(handler, messageToClient);
-
-        //create new state from new messages
-        StateObject state = new StateObject();
-        state.workSocket = handler;
+            //create new state from new messages
+            StateObject state = new StateObject();
+            state.workSocket = handler;
 
 
-        //continue to receive data from client       
-        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                                      new AsyncCallback(ReadCallback), state);
+            //continue to receive data from client       
+            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                                          new AsyncCallback(ReadCallback), state);
 
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
 
     }
     public void EndMessage(Socket handler)
@@ -190,34 +224,58 @@ public class Server
 
         //get bytes for endMassage code ASCII
         byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
-
-        //send endOfMessage code to server
-        handler.BeginSend(byteData, 0, byteData.Length, 0,
-            new AsyncCallback(SendCallback), handler);
+        try
+        {
+            //send endOfMessage code to server
+            handler.BeginSend(byteData, 0, byteData.Length, 0,
+                new AsyncCallback(SendCallback), handler);
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
 
     public void Send(Socket handler, String data)
     {
         // Convert the string data to byte data using ASCII encoding.
         byte[] byteData = Encoding.ASCII.GetBytes(data);
-
-        // Begin sending the data to the remote device.
-        handler.BeginSend(byteData, 0, byteData.Length, 0,
-            new AsyncCallback(SendCallback), handler);
+        try
+        {
+            // Begin sending the data to the remote device.
+            handler.BeginSend(byteData, 0, byteData.Length, 0,
+                new AsyncCallback(SendCallback), handler);
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
 
 
     private void SendCallback(IAsyncResult ar)
     {
+
+        // Retrieve the socket from the state object.
+        Socket handler = (Socket)ar.AsyncState;
         try
         {
-            // Retrieve the socket from the state object.
-            Socket handler = (Socket)ar.AsyncState;
-
             // Complete sending the data to the remote device.
             int bytesSent = handler.EndSend(ar);
 
             Console.WriteLine("Sent {0} bytes to client.", bytesSent);
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
         }
         catch (Exception e)
         {
@@ -227,13 +285,36 @@ public class Server
 
     public void Disconnect(Socket handler)
     {
-        handler.BeginDisconnect(false, new AsyncCallback(DisconnectCallback), handler);
+        try
+        {
+            handler.BeginDisconnect(false, new AsyncCallback(DisconnectCallback), handler);
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
 
     private void DisconnectCallback(IAsyncResult ar)
     {
+
         Socket handler = (Socket)ar.AsyncState;
-        handler.EndConnect(ar);
+        try
+        {
+            handler.EndConnect(ar);
+        }
+        catch (SocketException se)
+        {
+            HandleSocketException(se, handler);
+        }
+        catch (Exception e)
+        {
+            throw;
+        }
     }
 
 }
