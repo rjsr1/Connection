@@ -59,7 +59,7 @@ public class Client
 
             clientSocket.Connect(this.ip, this.port);
             Console.WriteLine("Conectado!!");
-            Receive(this.clientSocket);
+            //Receive(this.clientSocket);
         }
         catch (SocketException e)
         {
@@ -95,7 +95,7 @@ public class Client
         }
     }
     */
-    public void Receive(Socket client)
+    public string Receive(Socket client)
     {
         try
         {
@@ -104,10 +104,18 @@ public class Client
             state.workSocket = client;
             if (this.GetSocket().Connected)
             {
+                receiveDone.Reset();
                 // Begin receiving the data from the remote device.
                 client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                     new AsyncCallback(ReceiveCallback), state);
+                receiveDone.WaitOne();
+                return this.response;
             }
+            else
+            {
+                throw new SocketException();
+            }
+            
         }
         catch (ObjectDisposedException ode)
         {
@@ -122,20 +130,10 @@ public class Client
         {
             throw;
         }
+        return "";
     }
 
-    private void HandleSocketException(SocketException e)
-    {
-        try
-        {
-            this.clientSocket.Close();
-            StartClient();
-        }
-        catch (Exception exc)
-        {
-            throw;
-        }
-    }
+    
 
     private void ReceiveCallback(IAsyncResult ar)
     {
@@ -168,7 +166,7 @@ public class Client
                         {
                             this.response = state.sb.ToString();
                             this.response = RemoveEndOfMessage(response);
-                            HandleReceivedData();
+                            //HandleReceivedData();
                         }
                         // Signal that all bytes have been received.
                         receiveDone.Set();
@@ -324,6 +322,19 @@ public class Client
     public Socket GetSocket()
     {
         return this.clientSocket;
+    }
+
+    private void HandleSocketException(SocketException e)
+    {
+        try
+        {
+            this.clientSocket.Close();
+            StartClient();
+        }
+        catch (Exception exc)
+        {
+            throw;
+        }
     }
     public void ReleaseSocket()
     {
