@@ -27,6 +27,9 @@ public class Client
     private string ip;
     private int port;
 
+    public event EventHandler<Receive_Args> ReceiveEvent;
+
+
     // ManualResetEvent instances signal completion.
     private static ManualResetEvent connectDone =
         new ManualResetEvent(false);
@@ -59,7 +62,7 @@ public class Client
 
             clientSocket.Connect(this.ip, this.port);
             Console.WriteLine("Conectado!!");
-            //Receive(this.clientSocket);
+            Receive(this.clientSocket);
         }
         catch (SocketException e)
         {
@@ -95,7 +98,7 @@ public class Client
         }
     }
     */
-    public string Receive(Socket client)
+    public void Receive(Socket client)
     {
         try
         {
@@ -108,8 +111,9 @@ public class Client
                 // Begin receiving the data from the remote device.
                 client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                     new AsyncCallback(ReceiveCallback), state);
-                receiveDone.WaitOne();
-                return this.response;
+                //receiveDone.WaitOne();
+                //HandleReceivedData();
+                //Receive doesn't block thread.....
             }
             else
             {
@@ -130,7 +134,7 @@ public class Client
         {
             throw;
         }
-        return "";
+        //return "";
     }
 
     
@@ -166,7 +170,7 @@ public class Client
                         {
                             this.response = state.sb.ToString();
                             this.response = RemoveEndOfMessage(response);
-                            //HandleReceivedData();
+                            HandleReceivedData();
                         }
                         // Signal that all bytes have been received.
                         receiveDone.Set();
@@ -310,9 +314,18 @@ public class Client
 
     public void HandleReceivedData()
     {
+        //lembrar de tirar esse metodo
         Console.WriteLine(this.GetSocketReceiveResponse());
+        string EventResponse = this.GetSocketReceiveResponse();
+        OnMessageReceive(new Receive_Args(EventResponse));
         Receive(this.clientSocket);
     }
+
+    protected virtual void OnMessageReceive(Receive_Args receive_Args)
+    {
+        ReceiveEvent?.Invoke(this, receive_Args);
+    }
+
     public string GetSocketReceiveResponse()
     {
         // Console.WriteLine(this.response+"essa eh a resposta");
