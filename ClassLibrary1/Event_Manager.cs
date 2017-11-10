@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace Connection
 {
@@ -10,7 +11,7 @@ namespace Connection
     public class Receive_Args:EventArgs
     {
         private string message;
-        //private string date_hour;
+        
 
         public Receive_Args(string m)
         {
@@ -21,9 +22,34 @@ namespace Connection
         {
             get { return message; }
         }
-       // public string Data_Hour
-       //  {
-       //     get { return this.date_hour; }
-       // }
+       
+    }
+    public class Receive_Args_Server : EventArgs
+    {
+        private string message;
+        private DateTime dateTime;
+        private Socket clientSocket;
+
+        public Receive_Args_Server(string m,DateTime dateTime,Socket socket)
+        {
+            this.message = m;
+            this.dateTime = dateTime;
+            this.clientSocket = socket;
+        }
+
+        public string GetMessage
+        {
+            get { return message; }
+        }
+
+        public DateTime GetDateTime
+        {
+            get { return this.dateTime; }
+        }
+        public Socket GetSocket
+        {
+            get { return this.clientSocket; }
+        }
+
     }
 }

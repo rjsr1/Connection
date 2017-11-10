@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -15,6 +16,8 @@ public class StateObject
     public byte[] buffer = new byte[BufferSize];
     // Received data string.
     public StringBuilder sb = new StringBuilder();
+
+
 }
 
 public class Server
@@ -25,14 +28,18 @@ public class Server
     private int port;
     private string ip;
     private int maxNumberOfClients;
+    //logName name of Log file     
+    private StreamWriter streamWriter;
 
-    public Server(int port, string ip, int maxNumberOfClients)
+    public event EventHandler<Receive_Args_Server> ReceiveEventServer;
+
+    public Server(int port, string ip, int maxNumberOfClients, string logName)
     {
         this.port = port;
         this.ip = ip;
         this.maxNumberOfClients = maxNumberOfClients;
+        this.streamWriter = new StreamWriter(logName);
     }
-
 
     public void StartListening()
     {
@@ -81,9 +88,11 @@ public class Server
         // Signal the main thread to continue.
         allDone.Set();
 
+
         // Get the socket that handles the client request.
         Socket listener = (Socket)ar.AsyncState;
         Socket handler = listener.EndAccept(ar);
+        Connection_Util.WriteOnLog(streamWriter, " coneted with client : " + handler.LocalEndPoint.ToString() + " and ready to listen...");
 
         // Create the state object.
         StateObject state = new StateObject();
@@ -107,6 +116,7 @@ public class Server
     {
         try
         {
+            Connection_Util.WriteOnLog(streamWriter, se.Message + " " + se.StackTrace);
             handler.Close();
         }
         catch (Exception e)
@@ -190,8 +200,16 @@ public class Server
         //***************lembrar que criar metodo para endofmessage*********talvez seja isso que causa client não ler resultado
 
         string messageToClient = AppendEndofMessageTag(content);
-        //EndMessage(handler);        
+        //EndMessage(handler);  
 
+
+        Connection_Util.WriteOnLog(streamWriter, content + " " + handler.LocalEndPoint.ToString());
+
+        DateTime receiveDateTime = DateTime.Now;
+        Receive_Args_Server args = new Receive_Args_Server(content, receiveDateTime, handler);
+        OnMessageReceiveServer(args);
+
+        /******MANTIDO PARA DEPURAÇÂO********************/
         try
         {
             //Send response to client
@@ -215,7 +233,12 @@ public class Server
         {
             throw;
         }
+        /**********************************************/
+    }
 
+    protected virtual void OnMessageReceiveServer(Receive_Args_Server args)
+    {
+        ReceiveEventServer?.Invoke(this, args);
     }
     public void EndMessage(Socket handler)
     {
@@ -305,7 +328,9 @@ public class Server
         Socket handler = (Socket)ar.AsyncState;
         try
         {
+            
             handler.EndConnect(ar);
+            Connection_Util.WriteOnLog(streamWriter, "Desconnected");
         }
         catch (SocketException se)
         {

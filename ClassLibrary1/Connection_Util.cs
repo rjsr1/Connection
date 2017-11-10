@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace Connection
 {
@@ -13,7 +14,14 @@ namespace Connection
             int unicode = n;
             char character = (char)unicode;
             return character.ToString();
-
         }
+        public static void WriteOnLog(StreamWriter stream, string s)
+        {
+
+            stream.WriteLineAsync(DateTime.Now+" "+s);
+            stream.Flush();
+        }
+
+
     }
 }

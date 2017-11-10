@@ -4,6 +4,8 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Text;
 using Connection;
+using System.IO;
+
 
 /*
 public class StateObject
@@ -20,12 +22,12 @@ public class StateObject
 */
 
 
-
 public class Client
 {
     private Socket clientSocket;
     private string ip;
     private int port;
+    private StreamWriter streamWriter;
 
     public event EventHandler<Receive_Args> ReceiveEvent;
 
@@ -41,10 +43,11 @@ public class Client
     // The response from the remote device.
     private string response = string.Empty;
 
-    public Client(int port, string ip)
+    public Client(int port, string ip,string fileName)
     {
         this.ip = ip;
         this.port = port;
+        this.streamWriter = new StreamWriter(fileName);
     }
     public void StartClient()
     {
@@ -61,6 +64,7 @@ public class Client
                  SocketType.Stream, ProtocolType.Tcp);
 
             clientSocket.Connect(this.ip, this.port);
+            Connection_Util.WriteOnLog(streamWriter, "Connected..");            
             Console.WriteLine("Conectado!!");
             Receive(this.clientSocket);
         }
@@ -119,7 +123,7 @@ public class Client
             {
                 throw new SocketException();
             }
-            
+
         }
         catch (ObjectDisposedException ode)
         {
@@ -134,10 +138,10 @@ public class Client
         {
             throw;
         }
-        //return "";
+
     }
 
-    
+
 
     private void ReceiveCallback(IAsyncResult ar)
     {
@@ -206,38 +210,28 @@ public class Client
     {
         return s.Remove(s.Length - 1);
     }
-
-    /*public void EndMessage()
+    public void HandleReceivedData()
     {
-
-        Socket handler = this.clientSocket;
-
-        String endOfMessage = Connection_Util.ASCIITag(4);
-
-        //get bytes for endMassage code ASCII
-        byte[] byteData = Encoding.ASCII.GetBytes(endOfMessage);
-        try
-        {
-            //send endOfMessage code to server
-            handler.BeginSend(byteData, 0, byteData.Length, 0,
-                new AsyncCallback(SendCallback), handler);
-
-
-        }
-        catch (ObjectDisposedException ode)
-        {
-            throw;
-        }
-        catch (SocketException e)
-        {
-            HandleSocketException(e);
-        }
-        catch (Exception e)
-        {
-            throw;
-        }
+        //lembrar de tirar esse metodo
+        string response = this.GetSocketReceiveResponse();
+        Console.WriteLine(response);
+        Connection_Util.WriteOnLog(streamWriter, response);
+        string EventResponse = this.GetSocketReceiveResponse();
+        OnMessageReceive(new Receive_Args(EventResponse));
+        Receive(this.clientSocket);
     }
-    */
+
+    protected virtual void OnMessageReceive(Receive_Args receive_Args)
+    {
+        ReceiveEvent?.Invoke(this, receive_Args);
+    }
+
+    public string GetSocketReceiveResponse()
+    {
+        // Console.WriteLine(this.response+"essa eh a resposta");
+        return this.response;
+    }
+
     public string AppendeEndofMessageTag(string s)
     {
         String endOfMessage = Connection_Util.ASCIITag(4);
@@ -301,37 +295,6 @@ public class Client
         }
     }
 
-    /* private void HandleSocketDisconnected()
-     {
-         Console.WriteLine("Você está desconectado do Servidor.Deseja se reconectar? sim/nao");
-         String response = Console.ReadLine();
-         if (response == "sim")
-         {
-             StartClient();
-         }
-     }
-     */
-
-    public void HandleReceivedData()
-    {
-        //lembrar de tirar esse metodo
-        Console.WriteLine(this.GetSocketReceiveResponse());
-        string EventResponse = this.GetSocketReceiveResponse();
-        OnMessageReceive(new Receive_Args(EventResponse));
-        Receive(this.clientSocket);
-    }
-
-    protected virtual void OnMessageReceive(Receive_Args receive_Args)
-    {
-        ReceiveEvent?.Invoke(this, receive_Args);
-    }
-
-    public string GetSocketReceiveResponse()
-    {
-        // Console.WriteLine(this.response+"essa eh a resposta");
-        return this.response;
-    }
-
     public Socket GetSocket()
     {
         return this.clientSocket;
@@ -341,6 +304,8 @@ public class Client
     {
         try
         {
+            streamWriter.WriteLineAsync(DateTime.Now + " " + e.Message + " " + e.StackTrace);
+            streamWriter.Flush();
             this.clientSocket.Close();
             StartClient();
         }
@@ -353,6 +318,8 @@ public class Client
     {
         try
         {
+            streamWriter.WriteLine(DateTime.Now + " Disconnected");
+            streamWriter.Flush();
             this.clientSocket.Shutdown(SocketShutdown.Both);
             this.clientSocket.Close();
         }
@@ -388,6 +355,7 @@ public class Client
     {
         try
         {
+            streamWriter.WriteLineAsync(DateTime.Now + " disconected");
             Socket handler = (Socket)ar.AsyncState;
             handler.Shutdown(SocketShutdown.Both);
             handler.Close();
